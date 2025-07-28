@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { reactive, defineEmits } from 'vue'
+import { reactive, ref } from 'vue'
 import type { Book } from "@/model/Book.ts"
 
 const emit = defineEmits<{
@@ -14,47 +14,184 @@ const book = reactive<Omit<Book, 'id'>>({
   coverUrl: '',
 })
 
+const fileInput = ref<HTMLInputElement | null>(null)
+const errors = reactive({
+  title: '',
+  author: ''
+})
+
+function onFileChange(event: Event) {
+  const target = event.target as HTMLInputElement
+  if (target.files && target.files[0]) {
+    const file = target.files[0]
+    const reader = new FileReader()
+    reader.onload = () => {
+      book.coverUrl = reader.result as string
+    }
+    reader.readAsDataURL(file)
+  }
+}
+
+function validate(): boolean {
+  errors.title = book.title.trim() ? '' : 'Název je povinný.'
+  errors.author = book.author.trim() ? '' : 'Autor je povinný.'
+  return !errors.title && !errors.author
+}
+
 function onSubmit() {
-  if (book.title && book.author && book.year && book.genre) {
+  if (validate()) {
     emit('add-book', { ...book })
     book.title = ''
     book.author = ''
     book.year = new Date().getFullYear()
     book.genre = ''
     book.coverUrl = ''
+    if (fileInput.value) fileInput.value.value = ''
   }
 }
 </script>
 
 <template>
-  <v-form @submit.prevent="onSubmit">
-    <v-text-field
-      label="Název knihy"
-      v-model="book.title"
-      required
-    />
-    <v-text-field
-      label="Autor"
-      v-model="book.author"
-      required
-    />
+  <v-form @submit.prevent="onSubmit" class="book-form">
+    <div>
+      <v-text-field
+        label="Název knihy"
+        v-model="book.title"
+        :error-messages="errors.title"
+        outlined
+        color="primary"
+        class="input-field"
+        required
+      />
+    </div>
+
+    <div>
+      <v-text-field
+        label="Autor"
+        v-model="book.author"
+        :error-messages="errors.author"
+        outlined
+        color="primary"
+        class="input-field"
+        required
+      />
+    </div>
+
     <v-text-field
       label="Rok vydání"
       type="number"
       v-model.number="book.year"
-      required
       min="0"
+      outlined
+      color="primary"
+      class="input-field"
     />
+
     <v-text-field
       label="Žánr"
       v-model="book.genre"
-      required
+      outlined
+      color="primary"
+      class="input-field"
     />
-    <v-text-field
-      label="URL obálky"
-      v-model="book.coverUrl"
-      placeholder="https://..."
-    />
-    <v-btn type="submit" color="primary">Přidat knihu</v-btn>
+
+    <div class="file-upload">
+      <label for="file-input" class="file-label">Nahrát obálku z počítače</label>
+      <input
+        id="file-input"
+        ref="fileInput"
+        type="file"
+        accept="image/*"
+        @change="onFileChange"
+        class="file-input"
+      />
+      <div v-if="book.coverUrl" class="preview-wrapper">
+        <img :src="book.coverUrl" alt="Náhled obálky" class="preview-img" />
+      </div>
+    </div>
+
+    <v-btn type="submit" color="primary" class="submit-btn">Přidat knihu</v-btn>
   </v-form>
 </template>
+
+<style scoped>
+.book-form {
+  background: #1e1e2f;
+  padding: 1.5rem 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.8);
+  max-width: 600px;
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  color: #ddd;
+}
+
+/* základní styl inputů */
+.input-field >>> .v-input__control {
+  background: #2c2c44;
+  color: #ddd;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* když je input focusnutý */
+.input-field.v-input.v-input--is-focused >>> .v-input__control {
+  border-color: #5561f2!important;
+  background: #2c2c44;
+  box-shadow: 0 0 8px #5561f2cc;
+}
+
+.input-field.v-input.v-input--is-focused >>> label {
+  color: #5561f2 !important;
+}
+
+
+.file-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.file-label {
+  cursor: pointer;
+  color: #ddd;
+  font-weight: 400;
+  font-size: medium;
+  user-select: none;
+  text-decoration: underline;
+  max-width: max-content;
+}
+
+.file-input {
+  display: none;
+}
+
+.preview-wrapper {
+  max-width: 150px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 0 10px rgba(0,0,0,0.7);
+}
+
+.preview-img {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: cover;
+}
+
+.submit-btn {
+  align-self: flex-start;
+  width: 150px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #5561f2, #4e57d7);
+  color: white;
+  transition: background-color 0.3s ease;
+}
+
+.submit-btn:hover {
+  background: linear-gradient(135deg, #4e57d7, #5561f2);
+}
+
+</style>

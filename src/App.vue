@@ -6,9 +6,6 @@
 
 <style>
 .app {
-  max-width: 800px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-family: Arial, sans-serif;
+  background-color: #121222;
 }
 </style>

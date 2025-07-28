@@ -12,5 +12,6 @@ declare module 'vue' {
     BookForm: typeof import('./components/BookForm.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    TopBar: typeof import('./components/TopBar.vue')['default']
   }
 }
