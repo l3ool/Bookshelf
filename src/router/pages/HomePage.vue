@@ -21,37 +21,9 @@ const isSearching = ref(false)
 const currentPage = ref(1)
 const hasMoreResults = ref(true)
 
-// Combine books – first local, then remote
-const allBooks = computed(() => [
-  ...booksStore.books,
-  ...remoteBooks.value
-])
-
-function addBook(newBook: Omit<Book, 'id'>) {
-  const localBooks = booksStore.books.filter(b => typeof b.id === 'number')
-  const maxId = localBooks.reduce((max, b) => (b.id as number) > max ? (b.id as number) : max, 0)
-  const bookWithId: Book = { ...newBook, id: maxId + 1 }
-  booksStore.addBook(bookWithId)
-  dialog.value = false
-}
-
-
-function onSelectBook(book: Book) {
-  console.log('Kliknuto na knihu:', book.id, 'external:', book.external)
-
-  router.push({
-    name: 'BookDetail',
-    params: {
-      id: String(book.id),
-      // external vždy jako string 'true' nebo 'false' (pro debug)
-      external: book.external ? 'true' : 'false'
-    }
-  })
-}
-
-
-const filteredBooks = computed(() => {
-  return allBooks.value.filter(book => {
+// Rozdělení knih na lokální a externí
+const localBooks = computed(() =>
+  booksStore.books.filter(book => {
     const matchesTitle = book.title.toLowerCase().includes(searchTerm.value.toLowerCase())
     const matchesGenre = genreFilter.value
       ? book.genre?.toLowerCase().includes(genreFilter.value.toLowerCase())
@@ -61,7 +33,40 @@ const filteredBooks = computed(() => {
       : true
     return matchesTitle && matchesGenre && matchesAuthor
   })
-})
+)
+
+const externalBooks = computed(() =>
+  remoteBooks.value.filter(book => {
+    const matchesTitle = book.title.toLowerCase().includes(searchTerm.value.toLowerCase())
+    const matchesGenre = genreFilter.value
+      ? book.genre?.toLowerCase().includes(genreFilter.value.toLowerCase())
+      : true
+    const matchesAuthor = authorFilter.value
+      ? book.author.toLowerCase().includes(authorFilter.value.toLowerCase())
+      : true
+    return matchesTitle && matchesGenre && matchesAuthor
+  })
+)
+
+function addBook(newBook: Omit<Book, 'id'>) {
+  const localBooks = booksStore.books.filter(b => typeof b.id === 'number')
+  const maxId = localBooks.reduce((max, b) => (b.id as number) > max ? (b.id as number) : max, 0)
+  const bookWithId: Book = { ...newBook, id: maxId + 1 }
+  booksStore.addBook(bookWithId)
+  dialog.value = false
+}
+
+function onSelectBook(book: Book) {
+  console.log('Kliknuto na knihu:', book.id, 'external:', book.external)
+
+  router.push({
+    name: 'BookDetail',
+    params: {
+      id: String(book.id),
+      external: book.external ? 'true' : 'false'
+    }
+  })
+}
 
 // Load books from API
 async function loadBooksFromApi() {
@@ -69,17 +74,17 @@ async function loadBooksFromApi() {
   try {
     const results = await searchBooksOpenLibrary(searchTerm.value || 'book')
 
-    const externalBooks = results.map((b: Book) => ({
+    const externalBooksLoaded = results.map((b: Book) => ({
       ...b,
       external: true
     }))
 
-    console.log("Načtené knihy z API:", externalBooks) // pro ověření
+    console.log("Načtené knihy z API:", externalBooksLoaded)
 
     if (currentPage.value === 1) {
-      remoteBooks.value = externalBooks
+      remoteBooks.value = externalBooksLoaded
     } else {
-      remoteBooks.value = [...remoteBooks.value, ...externalBooks]
+      remoteBooks.value = [...remoteBooks.value, ...externalBooksLoaded]
     }
 
     hasMoreResults.value = results.length > 0
@@ -89,7 +94,6 @@ async function loadBooksFromApi() {
     isSearching.value = false
   }
 }
-
 
 // Delay search input
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
@@ -128,6 +132,7 @@ function openDialog() {
           placeholder="Hledat knihy podle názvu..."
           prepend-inner-icon="mdi-magnify"
           hide-details
+          clearable
         />
       </div>
 
@@ -151,30 +156,57 @@ function openDialog() {
       </div>
     </section>
 
-    <section class="book-list">
+    <section class="book-section">
+      <h2 class="section-title">Moje knihy</h2>
+
       <v-progress-circular
-        v-if="isSearching"
+        v-if="isSearching && remoteBooks.value.length === 0"
         indeterminate
         color="primary"
         size="36"
-        class="mx-auto mt-4"
+        class="mx-auto my-4"
       />
 
-      <div v-if="filteredBooks.length === 0 && !isSearching" class="empty-msg">
-        Žádné knihy neodpovídají zadaným kritériím.
+      <div v-if="localBooks.length === 0" class="empty-msg">
+        Žádné knihy ve vaší knihovně.
       </div>
 
-      <div class="grid">
+      <div class="grid" v-else>
         <BookCard
-          v-for="book in filteredBooks"
-          :key="`${book.id}-${book.external ? 'ext' : 'local'}`"
+          v-for="book in localBooks"
+          :key="`${book.id}-local`"
+          :book="book"
+          @select-book="onSelectBook"
+        />
+      </div>
+    </section>
+
+    <section class="book-section">
+      <h2 class="section-title">Knihy z API</h2>
+
+      <v-progress-circular
+        v-if="isSearching && remoteBooks.value.length > 0"
+        indeterminate
+        color="primary"
+        size="36"
+        class="mx-auto my-4"
+      />
+
+      <div v-if="externalBooks.length === 0 && !isSearching" class="empty-msg">
+        Žádné knihy z API neodpovídají zadaným kritériím.
+      </div>
+
+      <div class="grid" v-else>
+        <BookCard
+          v-for="book in externalBooks"
+          :key="`${book.id}-ext`"
           :book="book"
           @select-book="onSelectBook"
         />
       </div>
 
-      <div class="load-more-container" v-if="hasMoreResults && !isSearching">
-        <v-btn @click="loadNextPage" color="primary" variant="flat">
+      <div class="load-more-container" v-if="hasMoreResults && !isSearching && externalBooks.length > 0">
+        <v-btn @click="loadNextPage" color="primary" variant="flat" elevation="0">
           Načíst další
         </v-btn>
       </div>
@@ -251,8 +283,26 @@ function openDialog() {
   display: none;
 }
 
-.book-list {
-  flex-grow: 1;
+.book-section {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #eaeaea;
+  margin-bottom: 1rem;
+  text-align: center;
+  text-shadow: 0 0 8px #5561f2aa;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-top: 0.5rem;
   width: 100%;
 }
 
@@ -264,12 +314,10 @@ function openDialog() {
   color: #8889a0;
 }
 
-.grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 1.5rem;
+.load-more-container {
   margin-top: 1rem;
-  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .dialog-card {
@@ -283,10 +331,6 @@ function openDialog() {
   font-size: 1.3rem;
   color: #eee;
   margin: 10px 0 0 10px;
-}
-
-.load-more-container{
-  margin-top: 1rem;
 }
 
 @media (max-width: 900px) {
@@ -309,6 +353,10 @@ function openDialog() {
   .grid {
     grid-template-columns: 1fr;
   }
+
+  .section-title {
+    font-size: 1.6rem;
+  }
 }
 
 @media (max-width: 480px) {
@@ -322,5 +370,4 @@ function openDialog() {
     font-size: 1.1rem;
   }
 }
-
 </style>
