@@ -1,47 +1,79 @@
 <script lang="ts" setup>
 import { useRoute, useRouter } from 'vue-router'
 import { useBooksStore } from '@/stores/books'
-import { onMounted, computed, ref } from 'vue'
+import { onMounted, ref } from 'vue'
 
 import TopBar from '@/components/TopBar.vue'
-import BookForm from "@/components/BookForm.vue";
-import type {Book} from "@/model/Book.ts";  // přidán import TopBar
+import BookForm from "@/components/BookForm.vue"
+import type { Book } from "@/model/Book.ts"
+import { fetchBookDetailFromOpenLibrary } from '@/api/bookApi'
 
 const route = useRoute()
 const router = useRouter()
 const booksStore = useBooksStore()
 const dialog = ref(false)
 
-const bookId = Number(route.params.id)
-
-const book = computed(() => booksStore.books.find(b => b.id === bookId))
 const defaultCover = new URL('@/assets/no_poster.jpg', import.meta.url).href
 
+const bookId = route.params.id as string
+const isExternal = route.params.external === 'true'
+
+const book = ref<Book | null>(null)
+const loading = ref(true)  // loader stav
+
+function onImageLoad() {
+  loading.value = false
+}
+
+function onImageError() {
+  loading.value = false
+}
+
+onMounted(async () => {
+  console.log('Parametry routy:', route.params)
+
+  const bookId = route.params.id as string
+  const isExternal = route.params.external === 'true'
+  console.log('bookId:', bookId, 'isExternal:', isExternal)
+
+  if (isExternal) {
+    try {
+      const result = await fetchBookDetailFromOpenLibrary(bookId)
+      console.log('Načtený externí detail:', result)
+      book.value = { ...result, external: true }
+    } catch (e) {
+      console.error('Chyba při načtení externí knihy', e)
+      router.push({ name: 'Home' })
+    }
+  } else {
+    const found = booksStore.books.find(b => String(b.id) === bookId)
+    console.log('Nalezená lokální kniha:', found)
+    if (!found) {
+      router.push({ name: 'Home' })
+    } else {
+      book.value = found
+    }
+  }
+})
+
 function removeBook() {
-  if (book.value) {
+  if (book.value && !isExternal) {
     booksStore.removeBook(book.value.id)
     router.push({ name: 'Home' })
   }
 }
 
 function addBook(newBook: Omit<Book, 'id'>) {
-  const maxId = booksStore.books.reduce((max, b) => b.id > max ? b.id : max, 0)
+  const localBooks = booksStore.books.filter(b => typeof b.id === 'number')
+  const maxId = localBooks.reduce((max, b) => (b.id as number) > max ? (b.id as number) : max, 0)
   const bookWithId: Book = { ...newBook, id: maxId + 1 }
   booksStore.addBook(bookWithId)
   dialog.value = false
 }
 
-
-onMounted(() => {
-  if (!book.value) {
-    router.push({ name: 'Home' })
-  }
-})
-
 function openDialog() {
   dialog.value = true
 }
-
 </script>
 
 <template>
@@ -64,7 +96,19 @@ function openDialog() {
     <v-container v-if="book" class="book-detail" fluid>
       <v-row class="row-container" align="center" justify="center">
         <v-col cols="12" md="5" class="cover-col">
-          <img :src="book.coverUrl || defaultCover" alt="cover" class="cover-img" />
+          <div style="position: relative; width: 100%; aspect-ratio: 2 / 3;">
+            <img
+              :src="book.coverUrl || defaultCover"
+              alt="cover"
+              class="cover-img"
+              :class="{ 'hidden-img': loading }"
+              @load="onImageLoad"
+              @error="onImageError"
+            />
+            <div v-if="loading" class="loader">
+              <div class="spinner"></div>
+            </div>
+          </div>
         </v-col>
         <v-col cols="12" md="7" class="info-col">
           <h1 class="title">{{ book.title }}</h1>
@@ -81,6 +125,7 @@ function openDialog() {
           </p>
 
           <v-btn
+            v-if="!isExternal"
             color="error"
             class="delete-btn"
             @click="removeBook"
@@ -96,7 +141,7 @@ function openDialog() {
 </template>
 
 <style scoped>
-.page-container{
+.page-container {
   min-height: 100vh;
 }
 
@@ -127,6 +172,7 @@ function openDialog() {
   max-width: 400px;
   width: 100%;
   margin-bottom: 2rem;
+  position: relative;
 }
 
 .cover-img {
@@ -135,12 +181,40 @@ function openDialog() {
   object-fit: cover;
   border-radius: 20px;
   box-shadow: 0 4px 24px rgba(33, 33, 66, 0.6);
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
 }
 
 .cover-img:hover {
   transform: scale(1.05);
   box-shadow: 0 6px 32px rgba(85, 97, 242, 0.8);
+}
+
+.hidden-img {
+  opacity: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+.loader {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.spinner {
+  border: 4px solid rgba(255, 255, 255, 0.2);
+  border-top: 4px solid #5561f2;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .info-col {
@@ -171,7 +245,6 @@ strong {
   font-weight: 700;
   margin-right: 0.4rem;
 }
-
 
 .delete-btn {
   display: flex;
@@ -228,5 +301,4 @@ strong {
     align-self: center;
   }
 }
-
 </style>

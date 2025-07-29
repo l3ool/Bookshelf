@@ -4,19 +4,26 @@ import {
   type RouteRecordRaw
 } from "vue-router"
 
-import HomePage from "@/router/pages/HomePage.vue";
-import BookDetail from '@/router/pages/BookDetail.vue'
+import HomePage from "@/router/pages/HomePage.vue"
+import BookDetail from "@/router/pages/BookDetail.vue"
 
-
-const routes = [
-  { path: '/', name: 'Home', component: HomePage, },
-  { path: '/book/:id', name: 'BookDetail', component: BookDetail, props: true },
+const routes: RouteRecordRaw[] = [
+  {
+    path: '/',
+    name: 'Home',
+    component: HomePage
+  },
+  {
+    path: '/book/:id/:external?',
+    name: 'BookDetail',
+    component: BookDetail,
+    props: true
+  }
 ]
 
 const router = createRouter({
   history: createWebHistory(),
-  routes,
-});
+  routes
+})
 
-
-export default router;
+export default router

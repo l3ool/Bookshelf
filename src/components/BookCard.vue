@@ -19,8 +19,10 @@ function onError() {
 }
 
 function onClick() {
+  console.log('BookCard klik:', props.book)
   emit('select-book', props.book);
 }
+
 </script>
 
 <template>

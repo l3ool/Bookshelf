@@ -1,41 +1,116 @@
 <script lang="ts" setup>
-import { ref, computed } from 'vue'
+import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { useBooksStore } from "@/stores/books"
-import BookForm from "@/components/BookForm.vue"
-import BookCard from "@/components/BookCard.vue"
+import { useBooksStore } from '@/stores/books'
+import BookForm from '@/components/BookForm.vue'
+import BookCard from '@/components/BookCard.vue'
 import TopBar from '@/components/TopBar.vue'
-import type { Book } from "@/model/Book"
+import type { Book } from '@/model/Book'
+import { searchBooksOpenLibrary } from '@/api/bookApi'
 
 const booksStore = useBooksStore()
 const router = useRouter()
 
 const dialog = ref(false)
 const searchTerm = ref('')
-const genreFilter = ref<string | null>(null)
+const genreFilter = ref('')
 const authorFilter = ref('')
 
+const remoteBooks = ref<Book[]>([])
+const isSearching = ref(false)
+const currentPage = ref(1)
+const hasMoreResults = ref(true)
+
+// Combine books – first local, then remote
+const allBooks = computed(() => [
+  ...booksStore.books,
+  ...remoteBooks.value
+])
+
 function addBook(newBook: Omit<Book, 'id'>) {
-  const maxId = booksStore.books.reduce((max, b) => b.id > max ? b.id : max, 0)
+  const localBooks = booksStore.books.filter(b => typeof b.id === 'number')
+  const maxId = localBooks.reduce((max, b) => (b.id as number) > max ? (b.id as number) : max, 0)
   const bookWithId: Book = { ...newBook, id: maxId + 1 }
   booksStore.addBook(bookWithId)
   dialog.value = false
 }
 
+
 function onSelectBook(book: Book) {
-  router.push({ name: 'BookDetail', params: { id: book.id } })
+  console.log('Kliknuto na knihu:', book.id, 'external:', book.external)
+
+  router.push({
+    name: 'BookDetail',
+    params: {
+      id: String(book.id),
+      // external vždy jako string 'true' nebo 'false' (pro debug)
+      external: book.external ? 'true' : 'false'
+    }
+  })
 }
 
+
 const filteredBooks = computed(() => {
-  return booksStore.books.filter(book => {
+  return allBooks.value.filter(book => {
     const matchesTitle = book.title.toLowerCase().includes(searchTerm.value.toLowerCase())
-    const matchesGenre = genreFilter.value ? book.genre.toLowerCase() === genreFilter.value.toLowerCase() : true
-    const matchesAuthor = authorFilter.value ? book.author.toLowerCase().includes(authorFilter.value.toLowerCase()) : true
+    const matchesGenre = genreFilter.value
+      ? book.genre?.toLowerCase().includes(genreFilter.value.toLowerCase())
+      : true
+    const matchesAuthor = authorFilter.value
+      ? book.author.toLowerCase().includes(authorFilter.value.toLowerCase())
+      : true
     return matchesTitle && matchesGenre && matchesAuthor
   })
 })
 
-const genres = ['History', 'Fiction', 'Sci-Fi', 'Biography', 'Fantasy']
+// Load books from API
+async function loadBooksFromApi() {
+  isSearching.value = true
+  try {
+    const results = await searchBooksOpenLibrary(searchTerm.value || 'book')
+
+    const externalBooks = results.map((b: Book) => ({
+      ...b,
+      external: true
+    }))
+
+    console.log("Načtené knihy z API:", externalBooks) // pro ověření
+
+    if (currentPage.value === 1) {
+      remoteBooks.value = externalBooks
+    } else {
+      remoteBooks.value = [...remoteBooks.value, ...externalBooks]
+    }
+
+    hasMoreResults.value = results.length > 0
+  } catch (e) {
+    console.error('Chyba při načítání knih z Open Library', e)
+  } finally {
+    isSearching.value = false
+  }
+}
+
+
+// Delay search input
+let debounceTimer: ReturnType<typeof setTimeout> | null = null
+watch(searchTerm, () => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    currentPage.value = 1
+    loadBooksFromApi()
+  }, 500)
+})
+
+// initial load
+onMounted(() => {
+  loadBooksFromApi()
+})
+
+function loadNextPage() {
+  if (isSearching.value || !hasMoreResults.value) return
+  currentPage.value++
+  loadBooksFromApi()
+}
 
 function openDialog() {
   dialog.value = true
@@ -65,9 +140,8 @@ function openDialog() {
           clearable
           clear-icon="mdi-close-circle"
         />
-        <v-select
+        <v-text-field
           v-model="genreFilter"
-          :items="genres"
           placeholder="Žánr"
           hide-details
           dense
@@ -78,17 +152,31 @@ function openDialog() {
     </section>
 
     <section class="book-list">
-      <div v-if="filteredBooks.length === 0" class="empty-msg">
+      <v-progress-circular
+        v-if="isSearching"
+        indeterminate
+        color="primary"
+        size="36"
+        class="mx-auto mt-4"
+      />
+
+      <div v-if="filteredBooks.length === 0 && !isSearching" class="empty-msg">
         Žádné knihy neodpovídají zadaným kritériím.
       </div>
 
       <div class="grid">
         <BookCard
           v-for="book in filteredBooks"
-          :key="book.id"
+          :key="`${book.id}-${book.external ? 'ext' : 'local'}`"
           :book="book"
           @select-book="onSelectBook"
         />
+      </div>
+
+      <div class="load-more-container" v-if="hasMoreResults && !isSearching">
+        <v-btn @click="loadNextPage" color="primary" variant="flat">
+          Načíst další
+        </v-btn>
       </div>
     </section>
 
@@ -197,8 +285,11 @@ function openDialog() {
   margin: 10px 0 0 10px;
 }
 
-/* RESPONSIVE BREAKPOINTS */
-@media (max-width: 768px) {
+.load-more-container{
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
   .home-container {
     padding: 1rem;
     gap: 1.2rem;
