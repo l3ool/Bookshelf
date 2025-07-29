@@ -31,7 +31,6 @@ const filteredBooks = computed(() => {
     const matchesTitle = book.title.toLowerCase().includes(searchTerm.value.toLowerCase())
     const matchesGenre = genreFilter.value ? book.genre.toLowerCase() === genreFilter.value.toLowerCase() : true
     const matchesAuthor = authorFilter.value ? book.author.toLowerCase().includes(authorFilter.value.toLowerCase()) : true
-
     return matchesTitle && matchesGenre && matchesAuthor
   })
 })
@@ -54,7 +53,6 @@ function openDialog() {
           placeholder="Hledat knihy podle názvu..."
           prepend-inner-icon="mdi-magnify"
           hide-details
-          flat
         />
       </div>
 
@@ -64,9 +62,6 @@ function openDialog() {
           placeholder="Autor"
           hide-details
           dense
-          flat
-          rounded
-          solo
           clearable
           clear-icon="mdi-close-circle"
         />
@@ -76,9 +71,6 @@ function openDialog() {
           placeholder="Žánr"
           hide-details
           dense
-          flat
-          rounded
-          solo
           clearable
           clear-icon="mdi-close-circle"
         />
@@ -119,40 +111,11 @@ function openDialog() {
 .home-container {
   background-color: #121222;
   min-height: 100vh;
-  padding: 2rem 3rem;
   color: #eee;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   display: flex;
   flex-direction: column;
   gap: 2rem;
-}
-
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  user-select: none;
-}
-
-.header h1 {
-  font-weight: 700;
-  font-size: 2.25rem;
-  letter-spacing: 0.04em;
-  color: #f0f0f0;
-}
-
-.add-btn {
-  background: linear-gradient(135deg, #5561f2, #4e57d7);
-  color: white;
-  padding: 0.6rem 1.6rem;
-  font-weight: 600;
-  box-shadow: 0 4px 15px rgba(85, 97, 242, 0.6);
-  transition: background-color 0.3s ease;
-}
-
-.add-btn:hover {
-  background: linear-gradient(135deg, #4e57d7, #5561f2);
+  padding: 1rem 1.5rem;
 }
 
 .filters {
@@ -161,26 +124,24 @@ function openDialog() {
   align-items: center;
   gap: 1.5rem;
   margin-top: 1rem;
+  width: 100%;
 }
 
 .search-main {
   width: 100%;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
 }
 
-.search-main .v-input {
-  background: linear-gradient(135deg, #1e1e30, #2a2a44);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
-  border-radius: 18px;
-  padding: 0.5rem 1.2rem;
-  font-size: 1.2rem;
-}
-
-.search-main input {
-  color: #f5f5f5;
-  font-size: 1.2rem;
-  letter-spacing: 0.03em;
+.search-main .v-input,
+.filter-group .v-input {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  color: #ccc;
+  backdrop-filter: blur(6px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.7);
 }
 
 .filter-group {
@@ -188,23 +149,14 @@ function openDialog() {
   gap: 0.8rem;
   flex-wrap: wrap;
   justify-content: center;
-  opacity: 0.85;
+  opacity: 0.9;
+  width: 100%;
+  max-width: 500px;
 }
 
 .filter-group .v-input {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 14px;
+  flex: 1 1 240px;
   min-width: 200px;
-  max-width: 300px;
-  padding: 0.2rem 0.6rem;
-  font-size: 0.9rem;
-  color: #ccc;
-  backdrop-filter: blur(6px);
-}
-
-.filter-group input,
-.filter-group .v-select__selection-text {
-  color: #ccc !important;
 }
 
 .filter-group .v-field__label {
@@ -213,6 +165,7 @@ function openDialog() {
 
 .book-list {
   flex-grow: 1;
+  width: 100%;
 }
 
 .empty-msg {
@@ -225,9 +178,10 @@ function openDialog() {
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1.5rem;
   margin-top: 1rem;
+  width: 100%;
 }
 
 .dialog-card {
@@ -242,4 +196,40 @@ function openDialog() {
   color: #eee;
   margin: 10px 0 0 10px;
 }
+
+/* RESPONSIVE BREAKPOINTS */
+@media (max-width: 768px) {
+  .home-container {
+    padding: 1rem;
+    gap: 1.2rem;
+  }
+
+  .search-main,
+  .filter-group {
+    max-width: 100%;
+  }
+
+  .filter-group {
+    height: 70px;
+    gap: 1rem;
+    margin-bottom: 80px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .search-main .v-input,
+  .filter-group .v-input {
+    font-size: 0.95rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  .dialog-title {
+    font-size: 1.1rem;
+  }
+}
+
 </style>

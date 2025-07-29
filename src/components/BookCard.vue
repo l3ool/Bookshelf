@@ -53,8 +53,8 @@ function onClick() {
 }
 
 .book-card img {
-  width: 80px;
-  height: 120px;
+  width: 100px;
+  height: 140px;
   border-radius: 8px;
   object-fit: cover;
   box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);

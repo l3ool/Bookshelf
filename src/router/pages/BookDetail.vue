@@ -96,6 +96,10 @@ function openDialog() {
 </template>
 
 <style scoped>
+.page-container{
+  min-height: 100vh;
+}
+
 .book-detail {
   background-color: #1e1e3f;
   padding: 2.5rem 3rem;
@@ -103,11 +107,9 @@ function openDialog() {
   box-shadow: 0 4px 24px rgba(18, 18, 34, 0.8);
   max-width: 1200px;
   margin: 3rem auto;
-  color: #cfd8dc; /* světle šedá */
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #cfd8dc;
   display: flex;
   flex-direction: column;
-  min-height: 70vh;
 }
 
 .row-container {
@@ -211,7 +213,7 @@ strong {
 @media (max-width: 900px) {
   .row-container {
     flex-direction: column;
-    gap: 24px;
+    gap: 10px;
   }
   .cover-col {
     max-width: 100%;

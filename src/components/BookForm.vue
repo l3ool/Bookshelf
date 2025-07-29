@@ -59,7 +59,6 @@ function onSubmit() {
         v-model="book.title"
         :error-messages="errors.title"
         outlined
-        color="primary"
         class="input-field"
         required
       />
@@ -71,7 +70,6 @@ function onSubmit() {
         v-model="book.author"
         :error-messages="errors.author"
         outlined
-        color="primary"
         class="input-field"
         required
       />
@@ -83,7 +81,6 @@ function onSubmit() {
       v-model.number="book.year"
       min="0"
       outlined
-      color="primary"
       class="input-field"
     />
 
@@ -91,7 +88,6 @@ function onSubmit() {
       label="Žánr"
       v-model="book.genre"
       outlined
-      color="primary"
       class="input-field"
     />
 
@@ -116,10 +112,8 @@ function onSubmit() {
 
 <style scoped>
 .book-form {
-  background: #1e1e2f;
   padding: 1.5rem 2rem;
   border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.8);
   max-width: 600px;
   margin: auto;
   display: flex;
@@ -128,22 +122,10 @@ function onSubmit() {
   color: #ddd;
 }
 
-/* základní styl inputů */
 .input-field >>> .v-input__control {
   background: #2c2c44;
   color: #ddd;
   transition: border-color 0.3s ease, box-shadow 0.3s ease;
-}
-
-/* když je input focusnutý */
-.input-field.v-input.v-input--is-focused >>> .v-input__control {
-  border-color: #5561f2!important;
-  background: #2c2c44;
-  box-shadow: 0 0 8px #5561f2cc;
-}
-
-.input-field.v-input.v-input--is-focused >>> label {
-  color: #5561f2 !important;
 }
 
 

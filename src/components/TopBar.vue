@@ -22,7 +22,8 @@ function onAddClick() {
       rounded
       @click="onAddClick"
     >
-      Přidat novou knihu
+      <span class="btn-text">Přidat novou knihu</span>
+      <v-icon class="btn-icon" size="22">mdi-plus</v-icon>
     </v-btn>
   </header>
 </template>
@@ -35,6 +36,8 @@ function onAddClick() {
   margin-bottom: 1rem;
   user-select: none;
   padding: 0 1rem;
+  flex-wrap: wrap;
+  gap: 1rem;
 }
 
 .logo-link {
@@ -58,7 +61,10 @@ function onAddClick() {
 
 .add-btn {
   display: flex;
-  padding: 20px 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 20px 30px;
   border-radius: 20px;
   background: transparent !important;
   border: 2.5px solid #ff9e3b;
@@ -69,8 +75,6 @@ function onAddClick() {
   cursor: pointer;
   box-shadow: none;
   transition: background 0.3s ease, color 0.3s ease, box-shadow 0.3s ease;
-  align-items: center;
-  user-select: none;
 }
 
 .add-btn:hover {
@@ -79,4 +83,28 @@ function onAddClick() {
   box-shadow: 0 4px 16px rgba(255, 158, 59, 0.6);
 }
 
+.btn-icon{
+  display: none;
+}
+
+@media (max-width: 700px) {
+
+  .add-btn {
+    padding: 12px;
+    font-size: 0.95rem;
+  }
+
+  .btn-text {
+    display: none;
+  }
+
+  .btn-icon {
+    display: flex;
+  }
+
+  .logo-text{
+    font-weight: 600;
+    font-size: 1.5rem;
+  }
+}
 </style>
